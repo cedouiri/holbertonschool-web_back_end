@@ -9,6 +9,7 @@ import asyncio
 from typing import List
 
 
+wait_random = __import__('0-basic_async_syntax').wait_random
 task_wait_random = __import__('3-tasks').task_wait_random
 
 
@@ -18,5 +19,6 @@ async def task_wait_n(n: int, max_delay: int) -> List[float]:
     delays should be in ascending order without using sort() because of
     concurrency
     '''
-    la = await asyncio.gather(*(task_wait_random(max_delay) for i in range(n)))
+    c = (task_wait_random(max_delay) for i in range(n))
+    la = await asyncio.gather(*c)
     return sorted(la)
