@@ -9,16 +9,18 @@ Basic dictionary
 BaseCaching = __import__('base_caching').BaseCaching
 
 
-class MRUCache(BaseCaching):
+class LFUCache(BaseCaching):
     '''
-    a class MRUCache that inherits from BaseCaching
+    a class LFUCache that inherits from BaseCaching
 
     '''
 
     def __init__(self):
 
+        self.usedKey = {}
+        self.timesKey = {}
+        self.time = 0
         super().__init__()
-        self.ordered_cache_keys = []
 
     def put(self, key, item):
         '''
@@ -27,27 +29,38 @@ class MRUCache(BaseCaching):
         If key or item is None, this method should not do anything
         '''
 
-        if not (key is None or item is None):
-            if (
-                len(self.cache_data.keys()) == BaseCaching.MAX_ITEMS and
-                (key not in self.cache_data.keys())
-            ):
-                mru = self.ordered_cache_keys[-1]
-                print('DISCARD: {}'.format(mru))
-                self.ordered_cache_keys.remove(mru)
-                self.ordered_cache_keys.append(key)
-                del self.cache_data[mru]
-                self.cache_data[key] = item
-            elif (
-                len(self.cache_data.keys()) == BaseCaching.MAX_ITEMS and
-                (key in self.cache_data.keys())
-            ):
-                self.ordered_cache_keys.remove(key)
-                self.ordered_cache_keys.append(key)
-                self.cache_data[key] = item
+        if key is not None and item is not None:
+            if key not in self.usedKey:
+                self.usedKey[key] = 1
             else:
-                self.ordered_cache_keys.append(key)
-                self.cache_data[key] = item
+                self.usedKey[key] += 1
+            self.timesKey[key] = self.time
+            self.time += 1
+            self.cache_data[key] = item
+
+        if len(self.cache_data) > BaseCaching.MAX_ITEMS:
+            cpyusedKey = self.usedKey.copy()
+            del cpyusedKey[key]
+            smallest_value = min(cpyusedKey, key=cpyusedKey.get)
+            smallest_value = cpyusedKey[smallest_value]
+            sameKeyValue = {}
+            for _key, _value in cpyusedKey.items():
+                if _value == smallest_value:
+                    sameKeyValue[_key] = _value
+            if len(sameKeyValue) == 1:
+                discard_key = list(sameKeyValue.keys())[0]
+            else:
+                time_sameKeyValue = {}
+                for _key, _value in self.timesKey.items():
+                    if _key in sameKeyValue:
+                        time_sameKeyValue[_key] = _value
+
+                discard_key = min(time_sameKeyValue, key=time_sameKeyValue.get)
+            del self.cache_data[discard_key]
+            del self.usedKey[discard_key]
+            del self.timesKey[discard_key]
+
+            print("DISCARD: {}".format(discard_key))
 
     def get(self, key):
         '''
@@ -56,9 +69,9 @@ class MRUCache(BaseCaching):
         self.cache_data, return None
         '''
 
-        if key not in self.cache_data.keys():
+        if key is None or key not in self.cache_data:
             return None
-        else:
-            self.ordered_cache_keys.remove(key)
-            self.ordered_cache_keys.append(key)
-            return self.cache_data[key]
+        self.usedKey[key] += 1
+        self.timesKey[key] = self.time
+        self.time += 1
+        return self.cache_data[key]
