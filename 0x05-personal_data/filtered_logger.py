@@ -7,6 +7,8 @@ Regex-ing
 
 import logging
 import re
+import mysql.connector
+import os
 from typing import List
 
 
@@ -65,3 +67,20 @@ def get_logger() -> logging.Logger:
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
     return logger
+
+
+def get_db() -> mysql.connector.connection.MySQLConnection:
+    """Returns a connector to my_db database."""
+    user = os.getenv("PERSONAL_DATA_DB_USERNAME", 'root')
+    password = os.getenv("PERSONAL_DATA_DB_PASSWORD", '')
+    host = os.getenv("PERSONAL_DATA_DB_HOST", 'localhost')
+    db_name = os.getenv("PERSONAL_DATA_DB_NAME")
+
+    cnx = mysql.connector.connect(
+        host=host,
+        database=db_name,
+        user=user,
+        password=password
+    )
+
+    return cnx
